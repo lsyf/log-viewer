@@ -5,7 +5,11 @@
 原理是：
 - 存储日志使用elasticsearch
 - 分布式跟踪中间件使用skywalking
-- 对skywalking agent做二次开发，使微服务的日志中 **全局tid**  转变为  **全局tid|父线程tid|线程tid**。  参考：https://github.com/lsyf/skywalking/commit/249c587d1ede7f8ba5f1cf1dab64954ac3c48df0
+- 对skywalking agent做二次开发，使微服务的日志中 **全局tid**  转变为  **全局tid|父线程tid|线程tid**。  
+  - 改动参考：https://github.com/lsyf/skywalking/commit/249c587d1ede7f8ba5f1cf1dab64954ac3c48df0
+  - 需要重新打包agent
+  - 二次开发影响极小，只影响日志中tid
+  - 改动少，意味着二次开发成本小，也代表每次升级skywalking成本很小
 - 而当前的web服务 用于梳理日志，使其分层展示。
 
 效果如下
