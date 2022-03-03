@@ -1,0 +1,98 @@
+sw:
+  path: http://192.168.122.15:12800/graphql
+  query: |
+    {
+        "query":"query queryTrace($traceId: ID!) {
+                    trace: queryTrace(traceId: $traceId) {
+                      spans {
+                        traceId
+                        segmentId
+                        spanId
+                        parentSpanId
+                        serviceCode
+                        startTime
+                        endTime
+                      }
+                    }
+                  }",
+        "variables":{
+            "traceId":"x{traceId}"
+        }
+    }
+es6:
+  path: http://192.168.122.17:9200
+  dynamicIndex: true
+  index: cashout-x{yyyy}.x{MM}.x{dd},testcashout-x{yyyy}.x{MM}.x{dd}
+  type: cashout,testcashout
+  size: 1000
+  query: |
+    {
+        "size":x{size},
+        "sort":[
+            {
+                "messagetime":{
+                    "order":"x{sort}"
+                }
+            }
+        ],
+        "_source":["message"],
+        "query": {
+           "bool": {
+             "filter": {
+               "term": {
+                 "logtid": "x{traceId}"
+               }
+             }
+           }
+        }
+    }
+
+
+server:
+  port: 8081
+spring:
+  application:
+    name: log-viewer
+  profiles:
+    active: @profileActive@
+    include: monitor
+  aop:
+    proxy-target-class: true
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: LEGACYHTML5
+    encoding: UTF-8
+    check-template-location: true
+    servlet:
+      content-type: text/html
+  cache:
+    cache-names: dubboCache
+    caffeine:
+      spec: maximumSize=500,expireAfterAccess=60s
+
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 60000
+        readTimeout: 60000
+        loggerLevel: BASIC
+  okhttp:
+    enabled: true
+
+#swagger配置
+swagger:
+  enabled: true
+  base-package: com.lsyf.pay.logger
+  base-path: /**
+  exclude-path: /error, /ops/**
+
+
+tester:
+  name: tester
+  devAddress: zookeeper://192.168.122.16:2181
+  testAddress: zookeeper://192.168.132.96:2181?backup=192.168.132.97:2181,192.168.132.98:2181
+

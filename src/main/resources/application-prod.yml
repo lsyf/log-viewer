@@ -1,0 +1,13 @@
+es6:
+  path: http://172.41.10.11:9200
+  dynamicIndex: true
+  index: cashout-x{yyyy}.x{MM}.x{dd}
+  size: 1000
+
+logging:
+  config: classpath:log4j2-prod.xml
+
+log:
+  env:
+    cashout: PROD
+    testcashout: PROD

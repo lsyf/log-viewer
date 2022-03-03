@@ -1,0 +1,86 @@
+monitor:
+  query1: |
+    {
+      "size": 0,
+      "query": {
+        "range": {
+          "update_time": {
+            "gte": x{from},
+            "lt": x{to}
+          }
+        }
+      },
+      "aggs": {
+        "user_id": {
+          "terms": {
+            "field": "x{userField}"
+          },
+          "aggs": {
+            "merchant_id": {
+              "terms": {
+                "field": "merchant_id.keyword"
+              },
+              "aggs": {
+                "having": {
+                  "bucket_selector": {
+                    "buckets_path": {
+                      "orderCount": "_count"
+                    },
+                    "script": {
+                      "source": "params.orderCount >= x{num}"
+                    }
+                  }
+                }
+              }
+            },
+            "merchant_filter": {
+              "bucket_selector": {
+                "buckets_path": {
+                  "prod_count": "merchant_id._bucket_count"
+                },
+                "script": {
+                  "source": "params.prod_count >0"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+  query2: |
+    {
+      "size": 0,
+      "query": {
+        "range": {
+          "update_time": {
+            "gte": x{from},
+            "lt": x{to}
+          }
+        }
+      },
+      "aggs": {
+        "user_id": {
+          "terms": {
+            "field": "x{userField}"
+          },
+          "aggs": {
+            "amount": {
+              "sum": {
+                "field": "order_amount"
+              }
+            },
+            "having": {
+              "bucket_selector": {
+                "buckets_path": {
+                  "orderAmountSum": "amount"
+                },
+                "script": {
+                  "source": "params.orderAmountSum >= x{amount}"
+                }
+              }
+            }
+          }
+        }
+      }
+    }

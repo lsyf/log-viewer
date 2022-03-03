@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <title>查询日志</title>
+    <style>
+
+
+        main {
+            display: block;
+        }
+
+        #all {
+            margin: 10px
+        }
+
+        .logs {
+            padding-left: 10px;
+        }
+
+        .log {
+            font-size: 10px;
+        }
+
+        .title .info {
+            margin-left: 10px;
+            font-size: 8px;
+        }
+
+
+        body {
+            background-color: #dff0d8;
+            /*min-height: 75rem;*/
+            padding-top: 4.5rem;
+        }
+
+        .btn_float {
+            position: fixed;
+            height: 60px;
+            width: 60px;
+            bottom: 90px;
+            right: 50px;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .right {
+            float: right;
+        }
+    </style>
+
+</head>
+<body>
+
+<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+        <input id="input_traceId" class="form-control mr-sm-2" type="text" placeholder="traceId"
+               aria-label="Search" th:value="${id}">
+        <button id="btn_query" class="btn  btn-outline-primary my-2 my-sm-0" autocomplete="off">
+            Search
+        </button>
+    </div>
+</nav>
+
+
+<main role="main">
+    <button class="btn_float btn btn-primary" id="switch_collapse">show</button>
+    <div id="all">
+
+    </div>
+</main>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/popper.js/2.9.2/umd/popper.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script th:inline="javascript">
+
+
+    var all_logs = $("#all");
+    String.prototype.splice = function (start, newStr) {
+        return this.slice(0, start) + newStr + this.slice(start);
+    };
+
+    //数据展示逻辑
+    function fill(data) {
+        data.forEach(function (s, i) {
+            if (s == null || s.logs == null || s.logs.length == 0) {
+                return
+            }
+            var logId = "logId" + i;
+            var title = $('<div class="alert title" role="alert"></div>')
+            title.attr("data-toggle", 'collapse');
+            title.attr("data-target", logId);
+            //判断是否异常
+            title.addClass(s.error ? "btn-danger" : "btn-success");
+            //判断是否新增线程
+            title.append($('<span class="serviceCode"></span>').text(s.serviceCode + (s.newThread ? "(thread)" : "")))
+            title.append($('<span class="info "></span>').text("(" + s.logs.length + ")"))
+            title.append($('<strong class="info "></strong>').text(s.costTime == null ? '' : s.costTime + "ms"))
+            title.append($('<span class="info right"></span>').text(s.startTime))
+
+            var logs = $('<div class="logs collapse"></div>')
+            logs.attr("id", logId);
+            s.logs.forEach(function (l, i) {
+                var log = $('<p class="log alert" role="alert"></p>')
+                log.addClass(toClass(l.level))
+                var str = l.source;
+                str = str
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\"/g, '&quot;')
+                    .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+                    .replace(/(\r\n)|(\n)/g, '<br>')
+                var x = str.indexOf("TID")
+                x = str.indexOf("]", x)
+                str = str.splice(x + 1, "<strong>") + "</strong>"
+                log.html(str)
+                logs.append(log)
+            })
+
+            title.on('click', function () {
+                logs.collapse('toggle')
+            })
+
+            var segment = $('<div class="segment"></div>')
+            segment.css("padding-left", s.lvl * 50)
+            segment.append(title)
+            segment.append(logs)
+            all_logs.append(segment)
+
+        })
+
+    }
+
+    function toClass(level) {
+        switch (level) {
+            case 'info':
+            case 'debug':
+                return
+            case 'warn':
+                return 'alert-warning'
+            case 'error':
+                return 'alert-danger'
+        }
+    }
+
+    //查询逻辑
+    function queryLog() {
+        var v = $("#input_traceId").val().trim()
+
+        all_logs.empty()
+        $.get("/log/" + v + ":json")
+            .always(function () {
+                $('#btn_query').prop('disabled', false);
+            })
+            .done(function (data) {
+                if (data.success) {
+                    fill(data.result)
+                }
+            })
+            .fail(function (data) {
+                console.log(data)
+            });
+    }
+
+    //按钮监听
+    $("#input_traceId").keyup(function (e) {
+        if (e.keyCode == 13) {
+            queryLog()
+        }
+    });
+    $('#btn_query').on('click', function () {
+        $('#btn_query').prop('disabled', true);
+        queryLog()
+    })
+
+    //展开所有按钮逻辑
+    var open = 0;
+    var txt = ['show', 'hide']
+    $("#switch_collapse").click(function () {
+        $(".collapse").collapse(txt[open])
+        open = (open + 1) % 2
+        $("#switch_collapse").html(txt[open])
+    });
+
+    //页面传值
+    var data = [[${data}]];
+    if (data != null) {
+        fill(data)
+    }
+
+</script>
+</body>
+</html>
