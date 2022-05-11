@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -38,10 +39,6 @@ public class ESClient {
     @Autowired
     ESProperties properties;
 
-    @Value("${log.env.cashout}")
-    private String cashoutEnv;
-    @Value("${log.env.testcashout}")
-    private String testCashoutEnv;
 
     public List<String> getLogs(String traceId) {
         List<String> logs = Lists.newArrayList();
@@ -51,23 +48,15 @@ public class ESClient {
             LocalDate ld = getDate(traceId);
 
             //查询前后两天的索引
-            for (int i = -2; i <= 2; i++) {
+            for (int i = -1; i <= 1; i++) {
                 LocalDate x = ld.plusDays(i);
                 Map<String, Object> map = Maps.newHashMap();
                 map.put("yyyy", x.getYear());
                 map.put("MM", StringUtil.frontWithZore(x.getMonthValue(), 2));
                 map.put("dd", StringUtil.frontWithZore(x.getDayOfMonth(), 2));
-                String indexes = properties.getIndex();
-                if (indexes.indexOf(",") != -1) {
-                    String[] indexArr = indexes.split(",");
-                    for (String idx : indexArr) {
-                        String index = StringUtil.replace(idx, map, "x{", "}", false);
-                        logs.addAll(getLogs(traceId, index));
-                    }
-                } else {
-                    String index = StringUtil.replace(indexes, map, "x{", "}", false);
-                    logs.addAll(getLogs(traceId, index));
-                }
+                String index = StringUtil.replace(properties.getIndex(), map, "x{", "}", false);
+                logs.addAll(getLogs(traceId, index));
+
             }
         } else {
             String indexes = properties.getIndex();
@@ -107,39 +96,17 @@ public class ESClient {
         map.put("traceId", traceId);
         String query = StringUtil.replace(properties.getQuery(), map, "x{", "}", false);
 
-        String type = "cashout";
-        String env = cashoutEnv;
-        if (index.contains("testcashout")) {
-            type = "testcashout";
-            env = testCashoutEnv;
-        } else if (index.contains("dev")) {
-            type = "dev-logs";
-            env = "dev";
-        } else if (index.contains("test1")) {
-            type = "test1-logs";
-            env = "test1";
-        }
+        Search search = new Search.Builder(query)
+                .addIndex(index)
+                .build();
 
-        final String prefix = "[" + env + "]";
-        Search search = null;
-        //开发环境不需要type
-        if ("DEV".equalsIgnoreCase(cashoutEnv)) {
-            search = new Search.Builder(query)
-                    .addIndex(index)
-                    .build();
-        } else {
-            search = new Search.Builder(query)
-                    .addIndex(index)
-                    .addType(type)
-                    .build();
-        }
         try {
             SearchResult result = logClient.execute(search);
             List<String> logs = result.getSourceAsStringList();
             return Optional.ofNullable(logs).orElse(Lists.newArrayList())
                     .stream()
-                    .map(s -> prefix + JSON.parseObject(s).getString("message"))
-                    .filter(s -> s != null)
+                    .map(s -> JSON.parseObject(s).getString("message"))
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } catch (IOException e) {
             log.warn("查询es异常", e);

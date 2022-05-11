@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  */
 public class DataUtil {
 
-    private static DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS");
+    private static DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     public static List<AppLog> processESRes(List<String> strings) {
         List<String> unparsed = Lists.newArrayList();
@@ -172,8 +172,6 @@ public class DataUtil {
     public static Log parse(String s) {
         s = s.trim();
         String source = s;
-        int firstIndexOfSquareBracket = s.indexOf("]");
-        s = s.substring(firstIndexOfSquareBracket + 1);
         //日志前19位是时间
         String time = s.substring(0, 23).trim();
 
