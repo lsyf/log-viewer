@@ -1,8 +1,0 @@
-
-es6:
-  path: http://192.168.132.110:9200
-  dynamicIndex: true
-  index: dev-logs-x{yyyy}.x{MM}.x{dd},test1-logs-x{yyyy}.x{MM}.x{dd}
-
-logging:
-  config: classpath:log4j2-test.xml
